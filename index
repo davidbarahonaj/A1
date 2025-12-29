@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mano Robótica - Dashboard EMG</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primario: #003366; 
+            --acento: #e67e22;   
+            --fondo: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--fondo);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border-top: 8px solid var(--primario);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover { transform: translateY(-5px); }
+
+        .db-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .online { background: #dcfce7; color: #15803d; }
+        .offline { background: #fee2e2; color: #b91c1c; }
+
+        .status-banner {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .mano-icon { font-size: 120px; margin: 20px 0; min-height: 150px; display: flex; align-items: center; }
+        .valor-num { font-size: 5rem; font-weight: 900; color: var(--primario); line-height: 1; }
+
+        @media (max-width: 850px) {
+            .dashboard-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <div class="card">
+            <div class="flex justify-between mb-6 text-slate-500 font-bold text-sm">
+                <span class="flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4"></i> <span id="fecha">--/--/----</span></span>
+                <span class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> <span id="hora">00:00:00</span></span>
+            </div>
+
+            <div id="db-indicator" class="db-status offline mb-4 self-start">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-red-500" id="ping"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600" id="dot"></span>
+                </span>
+                <span id="db-text">Base de Datos: Desconectada</span>
+            </div>
+
+            <div class="text-xs font-black text-blue-800 tracking-tighter mb-1">TECNOLÓGICO UNIVERSITARIO VIDA NUEVA</div>
+            <h1 class="text-4xl font-black text-[#e67e22] leading-none mb-6">MANO<br>ROBÓTICA</h1>
+
+            <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                <strong class="text-slate-400 block mb-3 uppercase text-[10px] tracking-widest">Equipo de Desarrollo:</strong>
+                <ul class="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700">
+                    <li>• ALCACIEGA ALEX</li><li>• BARAHONA DAVID</li>
+                    <li>• CHUQUI ADONIS</li><li>• GUANOTASIG JOEL</li>
+                    <li>• NAVARRETE ALEXIS</li><li>• TOAQUIZA TOAQUIZA</li>
+                </ul>
+                <div class="mt-4 pt-4 border-t border-slate-200 text-[10px] text-slate-400 font-bold uppercase">
+                    Docente: Ing. Ruiz Guangaje Carlos Rodrigo
+                </div>
+            </div>
+
+            <button onclick="toggleModal(true)" class="mt-8 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-blue-600 transition uppercase tracking-widest">
+                <i data-lucide="settings-2" class="w-4 h-4"></i> Configurar Firebase
+            </button>
+        </div>
+
+        <div class="card">
+            <h2 class="text-lg font-black text-slate-700 uppercase italic mb-6 border-b pb-2 flex justify-between">
+                Sensor EMG AD8832 
+                <span class="text-blue-500 not-italic text-xs font-bold">LIVE DATA</span>
+            </h2>
+            
+            <div class="flex flex-col items-center justify-center flex-grow">
+                <div id="banner" class="status-banner bg-red-500 shadow-lg shadow-red-200">ESTADO: REPOSO (CERRADA)</div>
+                
+                <div class="mano-icon" id="mano">
+                    <i class="fa-solid fa-hand-fist text-slate-300"></i>
+                </div>
+
+                <div class="bg-slate-50 w-full p-8 rounded-3xl border border-slate-100 shadow-inner text-center">
+                    <div class="valor-num" id="valor">0</div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Lectura Analógica (0-1023)</p>
+                    
+                    <input type="range" min="0" max="1023" value="0" 
+                           class="w-full mt-8 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" 
+                           oninput="actualizarSensor(this.value)">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm hidden p-4">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
+            <h2 class="text-slate-800 text-2xl font-black mb-2">Configuración</h2>
+            <p class="text-slate-500 text-sm mb-6">Ingresa las credenciales de Firebase Realtime Database.</p>
+            
+            <input type="password" id="apiKey" placeholder="API KEY" class="w-full bg-slate-100 border-0 rounded-xl p-4 text-slate-800 mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm">
+            <input type="text" id="dbUrl" placeholder="DATABASE URL (https://...)" class="w-full bg-slate-100 border-0 rounded-xl p-4 text-slate-800 mb-6 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm">
+            
+            <div class="flex gap-3">
+                <button onclick="save()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg shadow-blue-200">Conectar</button>
+                <button onclick="toggleModal(false)" class="px-6 py-4 text-slate-400 font-bold hover:text-slate-600 transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar Iconos Lucide
+        lucide.createIcons();
+
+        // Reloj y Fecha
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('fecha').innerText = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            document.getElementById('hora').innerText = now.toLocaleTimeString('es-ES', { hour12: false });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Lógica del Sensor (Simulación y UI)
+        function actualizarSensor(val) {
+            const valorTxt = document.getElementById('valor');
+            const mano = document.getElementById('mano');
+            const banner = document.getElementById('banner');
+            
+            valorTxt.innerText = val;
+
+            // Umbral de activación: 400
+            if (parseInt(val) > 400) {
+                mano.innerHTML = '<i class="fa-solid fa-hand text-green-500 transition-all scale-110"></i>';
+                banner.innerText = "ESTADO: MOVIMIENTO (ABIERTA)";
+                banner.style.backgroundColor = "#22c55e"; // Green-500
+                banner.classList.replace('shadow-red-200', 'shadow-green-200');
+            } else {
+                mano.innerHTML = '<i class="fa-solid fa-hand-fist text-slate-300 transition-all"></i>';
+                banner.innerText = "ESTADO: REPOSO (CERRADA)";
+                banner.style.backgroundColor = "#ef4444"; // Red-500
+                banner.classList.replace('shadow-green-200', 'shadow-red-200');
+            }
+        }
+
+        // Manejo de Modal y "Conexión"
+        function toggleModal(show) {
+            document.getElementById('modal').classList.toggle('hidden', !show);
+        }
+
+        function updateDBUI(isConnected) {
+            const indicator = document.getElementById('db-indicator');
+            const text = document.getElementById('db-text');
+            const ping = document.getElementById('ping');
+            const dot = document.getElementById('dot');
+
+            if (isConnected) {
+                indicator.className = "db-status online mb-4 self-start";
+                text.innerText = "Base de Datos: Conectada";
+                ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-green-500";
+                dot.className = "relative inline-flex rounded-full h-3 w-3 bg-green-600";
+            }
+        }
+
+        function save() {
+            const key = document.getElementById('apiKey').value;
+            const url = document.getElementById('dbUrl').value;
+
+            if(!key || !url) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Completa todos los campos' });
+                return;
+            }
+
+            // Guardamos estado localmente
+            localStorage.setItem('connected', 'true');
+            updateDBUI(true);
+            toggleModal(false);
+            
+            Swal.fire({
+                icon: 'success',
+                title: '¡Conectado!',
+                text: 'Enlazado con Firebase exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+
+        // Al cargar, verificar si ya estaba "conectado"
+        window.onload = () => {
+            if(localStorage.getItem('connected')) updateDBUI(true);
+        };
+    </script>
+</body>
+</html>
